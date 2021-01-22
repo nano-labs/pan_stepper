@@ -8,6 +8,7 @@
 #define STEPS_PER_MOTOR_REVOLUTION 32   
 
 #define OLED_RESET 4
+
 Adafruit_SSD1306 display(OLED_RESET);
 
 static const unsigned char PROGMEM ca_logo[128 * 32 / 8] =
@@ -50,12 +51,12 @@ B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00000000, B00
 
 // Declare 'small_stepper' variable
 Stepper small_stepper(STEPS_PER_MOTOR_REVOLUTION, 8, 10, 9, 11);
-int steps_por_volta = 2048; // 32 steps por volta * 64 da caixa de reducao
+int steps_por_volta = 6144; // 32 steps por volta * 64 da caixa de reducao * 3 polia
 
-const int b_esquerda_pin = 12;
-const int b_direita_pin = 7;
-const int b_modo_pin = 4;
-const int b_start_pin = 2;
+const int b_esquerda_pin = 2;
+const int b_direita_pin = 4;
+const int b_modo_pin = 7;
+const int b_start_pin = 12;
 
 double angulo = 180; // em graus
 double tempo = 300; // em segundos
@@ -69,6 +70,7 @@ double delay_entre_steps = 0;//(tempo / total_de_steps) * 1000.0;
 int contador_de_steps = 0;
 
 unsigned long proximo_passo = 0;
+unsigned long inicio_ciclo = 0;
 int b_esquerda_trigged = 0;
 int b_esquerda_pushed = 0;
 int b_direita_trigged = 0;
@@ -101,7 +103,7 @@ void setup() {
 }
 
 void calcular_passos() {
-  total_de_steps = angulo / 360.0 * steps_por_volta; // total de steps
+  total_de_steps = (angulo / 360.0) * steps_por_volta; // total de steps
   delay_entre_steps = (tempo / total_de_steps) * 1000.0;
 }
 void draw_time() {
@@ -223,10 +225,11 @@ void draw_running() {
 }
 void loop() {
   if (parado == false) {
-    if (proximo_passo <= millis()) {
-      small_stepper.step(sentido);
-      contador_de_steps++;
-      proximo_passo = millis() + delay_entre_steps - 20; // 20 miliseconds to run one loop iteraction
+    int incremento = round(((millis() - inicio_ciclo) / delay_entre_steps)) - contador_de_steps;
+    if (incremento > 0) {
+//      proximo_passo = millis() + delay_entre_steps - 20; // 20 miliseconds to run one loop iteraction
+      small_stepper.step(sentido * incremento);
+      contador_de_steps = contador_de_steps + incremento;
       draw_running();
     }
   }
@@ -234,6 +237,7 @@ void loop() {
   if (contador_de_steps >= total_de_steps) {
     if (mode == 0) { // movimento continuo
       contador_de_steps = 0;
+      inicio_ciclo = millis();
     }
     else if (mode == 1) { // parar ao fim do movimento
       parado = true;
@@ -241,6 +245,7 @@ void loop() {
     else if (mode == 2) { // sweeping
       sentido = sentido * -1;
       contador_de_steps = 0;
+      inicio_ciclo = millis();
     }
   }
 
@@ -361,6 +366,7 @@ void loop() {
   };
   if (b_start_pushed == 1) {
     if (parado == true) {
+      inicio_ciclo = millis();
       parado = false;
       draw_running();
       calcular_passos();
