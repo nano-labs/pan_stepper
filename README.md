@@ -1,4 +1,4 @@
-# Paniramic Tamelapse Jig
+# Panoramic Timelapse Jig
 Device to make panoramic tamelapse videos
 
 ![device](https://github.com/nano-labs/pan_stepper/blob/master/Manual/img.png)
